@@ -1,0 +1,395 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000 400FE060 
+                       RCC     EQU              0x400FE060
+    2 00000000 400FE050 
+                       RCC_RIS EQU              0x400FE050
+    3 00000000         
+    4 00000000 20000402 
+                       SRAM_ADDR
+                               EQU              0x20000402  ;
+    5 00000000 20007FFE 
+                       SRAM_LIM
+                               EQU              0x20007FFE  ;
+    6 00000000         
+    7 00000000 40038028 
+                       ADC0_PSSI
+                               EQU              0x40038028  ;
+    8 00000000 4003800C 
+                       ADC0_ISC
+                               EQU              0x4003800C  ;
+    9 00000000 40038004 
+                       ADC0_RIS
+                               EQU              0x40038004  ;
+   10 00000000 400380A8 
+                       ADC0_SSFIFO3
+                               EQU              0x400380A8  ;
+   11 00000000         
+   12 00000000 4003001C 
+                       TIMER0_RIS
+                               EQU              0x4003001C  ; Timer Interrupt S
+                                                            tatus
+   13 00000000 40030024 
+                       TIMER0_ICR
+                               EQU              0x40030024  ; Timer Interrupt C
+                                                            lear
+   14 00000000 4003000C 
+                       TIMER0_CTL
+                               EQU              0x4003000C  ;
+   15 00000000         
+   16 00000000 40025038 
+                       GPIO_PORTF_DATA_L
+                               EQU              0x40025038  ; Access leds
+   17 00000000 40025044 
+                       GPIO_PORTF_DATA_S
+                               EQU              0x40025044  ; Access Sws
+   18 00000000         
+   19 00000000         
+   20 00000000         ;LABEL  DIRECTIVE VALUE  COMMENT
+   21 00000000                 AREA             main, READONLY, CODE
+   22 00000000                 THUMB
+   23 00000000                 EXPORT           __main      ; Make available
+   24 00000000                 EXTERN           initI2C     ; Make available
+   25 00000000                 EXTERN           initTimer
+   26 00000000                 EXTERN           initADC_F
+   27 00000000                 EXTERN           Timer2A_H
+   28 00000000                 EXTERN           ATD_INIT
+   29 00000000                 EXTERN           ST_INIT
+   30 00000000         
+   31 00000000         __main
+   32 00000000         
+   33 00000000 4824            LDR              R0,=RCC
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+   34 00000002 6801            LDR              R1,[R0]
+   35 00000004 F441 6100       ORR              R1,#0x00000800
+   36 00000008 F421 0180       BIC              R1,#0x00400000
+   37 0000000C 6001            STR              R1,[R0]     ; set Bypass and cl
+                                                            ear UseSysDiv
+   38 0000000E         
+   39 0000000E 4821            LDR              R0,=RCC
+   40 00000010 6801            LDR              R1,[R0]
+   41 00000012 F041 0110       ORR              R1,#0x10    ; Choose PIOSC
+   42 00000016 F421 5100       BIC              R1,#0x2000  ; Clear PWRDN
+   43 0000001A 6001            STR              R1,[R0]
+   44 0000001C         
+   45 0000001C 481D            LDR              R0,=RCC
+   46 0000001E 6801            LDR              R1,[R0]
+   47 00000020 F041 6198       ORR              R1,#0x04C00000
+   48 00000024 6001            STR              R1,[R0]     ; 20Mhz
+   49 00000026         
+   50 00000026 481C    wait_rcc
+                               LDR              R0,=RCC_RIS
+   51 00000028 6801            LDR              R1,[R0]
+   52 0000002A F001 0140       AND              R1,#0x40
+   53 0000002E 2940            CMP              R1,#0x40
+   54 00000030 D1F9            BNE              wait_rcc
+   55 00000032         
+   56 00000032 4818            LDR              R0,=RCC
+   57 00000034 6801            LDR              R1,[R0]
+   58 00000036 F421 6100       BIC              R1,#0x00000800
+   59 0000003A 6001            STR              R1,[R0]     ; Clear ByPass
+   60 0000003C         
+   61 0000003C 4B17            LDR              R3, =ADC0_SSFIFO3
+   62 0000003E F04F 0604       LDR              R6, =0x04
+   63 00000042 4F17            LDR              R7, =GPIO_PORTF_DATA_L
+   64 00000044 F8DF C05C       LDR              R12,=GPIO_PORTF_DATA_S
+   65 00000048 F8DF 805C       LDR              R8, =SRAM_ADDR
+   66 0000004C F8DF 905C       LDR              R9, =SRAM_LIM
+   67 00000050 F04F 0A00       LDR              R10,=0
+   68 00000054         
+   69 00000054         
+   70 00000054 F7FF FFFE       BL               ATD_INIT
+   71 00000058         
+   72 00000058         
+   73 00000058 F8DC 0000 
+                       sw1     LDR              R0,[R12]
+   74 0000005C F010 0010       ANDS             R0,#0x10
+   75 00000060 D1FA            BNE              sw1
+   76 00000062         
+   77 00000062 F04F 0002       MOV              R0,#0x02    ; Turn on LED RED
+   78 00000066 6038            STR              R0,[R7]
+   79 00000068         
+   80 00000068         
+   81 00000068 F7FF FFFE       BL               ST_INIT
+   82 0000006C         
+   83 0000006C         
+   84 0000006C         
+   85 0000006C         
+   86 0000006C F8DC 0000 
+                       sw2     LDR              R0,[R12]
+   87 00000070 F010 0001       ANDS             R0,#0x01
+   88 00000074 D1FA            BNE              sw2
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+   89 00000076         
+   90 00000076 F8DF 8030       LDR              R8,=SRAM_ADDR
+   91 0000007A F8DF 9030       LDR              R9,=SRAM_LIM
+   92 0000007E         
+   93 0000007E F04F 0008       MOV              R0,#0x8     ; Turn on LED GREEN
+                                                            
+   94 00000082 6038            STR              R0,[R7]
+   95 00000084         
+   96 00000084 F7FF FFFE       BL               initI2C
+   97 00000088 F7FF FFFE       BL               initTimer
+   98 0000008C F7FF FFFE       BL               initADC_F
+   99 00000090 E7FE    frv     B                frv
+  100 00000092 00 00           ALIGN
+  101 00000094                 END
+              400FE060 
+              400FE050 
+              400380A8 
+              40025038 
+              40025044 
+              20000402 
+              20007FFE 
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
+erwork --depend=.\objects\main.d -o.\objects\main.o -I.\RTE\_Target_1 -IC:\Keil
+_v5\ARM\PACK\Keil\TM4C_DFP\1.1.0\Device\Include\TM4C123 -IC:\Keil_v5\ARM\CMSIS\
+Include --predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 524" --
+predefine="TM4C123GH6PM SETA 1" --list=.\listings\main.lst main.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+__main 00000000
+
+Symbol: __main
+   Definitions
+      At line 31 in file main.s
+   Uses
+      At line 23 in file main.s
+Comment: __main used once
+frv 00000090
+
+Symbol: frv
+   Definitions
+      At line 99 in file main.s
+   Uses
+      At line 99 in file main.s
+Comment: frv used once
+main 00000000
+
+Symbol: main
+   Definitions
+      At line 21 in file main.s
+   Uses
+      None
+Comment: main unused
+sw1 00000058
+
+Symbol: sw1
+   Definitions
+      At line 73 in file main.s
+   Uses
+      At line 75 in file main.s
+Comment: sw1 used once
+sw2 0000006C
+
+Symbol: sw2
+   Definitions
+      At line 86 in file main.s
+   Uses
+      At line 88 in file main.s
+Comment: sw2 used once
+wait_rcc 00000026
+
+Symbol: wait_rcc
+   Definitions
+      At line 50 in file main.s
+   Uses
+      At line 54 in file main.s
+Comment: wait_rcc used once
+6 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+ADC0_ISC 4003800C
+
+Symbol: ADC0_ISC
+   Definitions
+      At line 8 in file main.s
+   Uses
+      None
+Comment: ADC0_ISC unused
+ADC0_PSSI 40038028
+
+Symbol: ADC0_PSSI
+   Definitions
+      At line 7 in file main.s
+   Uses
+      None
+Comment: ADC0_PSSI unused
+ADC0_RIS 40038004
+
+Symbol: ADC0_RIS
+   Definitions
+      At line 9 in file main.s
+   Uses
+      None
+Comment: ADC0_RIS unused
+ADC0_SSFIFO3 400380A8
+
+Symbol: ADC0_SSFIFO3
+   Definitions
+      At line 10 in file main.s
+   Uses
+      At line 61 in file main.s
+Comment: ADC0_SSFIFO3 used once
+GPIO_PORTF_DATA_L 40025038
+
+Symbol: GPIO_PORTF_DATA_L
+   Definitions
+      At line 16 in file main.s
+   Uses
+      At line 63 in file main.s
+Comment: GPIO_PORTF_DATA_L used once
+GPIO_PORTF_DATA_S 40025044
+
+Symbol: GPIO_PORTF_DATA_S
+   Definitions
+      At line 17 in file main.s
+   Uses
+      At line 64 in file main.s
+Comment: GPIO_PORTF_DATA_S used once
+RCC 400FE060
+
+Symbol: RCC
+   Definitions
+      At line 1 in file main.s
+   Uses
+      At line 33 in file main.s
+      At line 39 in file main.s
+      At line 45 in file main.s
+      At line 56 in file main.s
+
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Absolute symbols
+
+RCC_RIS 400FE050
+
+Symbol: RCC_RIS
+   Definitions
+      At line 2 in file main.s
+   Uses
+      At line 50 in file main.s
+Comment: RCC_RIS used once
+SRAM_ADDR 20000402
+
+Symbol: SRAM_ADDR
+   Definitions
+      At line 4 in file main.s
+   Uses
+      At line 65 in file main.s
+      At line 90 in file main.s
+
+SRAM_LIM 20007FFE
+
+Symbol: SRAM_LIM
+   Definitions
+      At line 5 in file main.s
+   Uses
+      At line 66 in file main.s
+      At line 91 in file main.s
+
+TIMER0_CTL 4003000C
+
+Symbol: TIMER0_CTL
+   Definitions
+      At line 14 in file main.s
+   Uses
+      None
+Comment: TIMER0_CTL unused
+TIMER0_ICR 40030024
+
+Symbol: TIMER0_ICR
+   Definitions
+      At line 13 in file main.s
+   Uses
+      None
+Comment: TIMER0_ICR unused
+TIMER0_RIS 4003001C
+
+Symbol: TIMER0_RIS
+   Definitions
+      At line 12 in file main.s
+   Uses
+      None
+Comment: TIMER0_RIS unused
+13 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+External symbols
+
+ATD_INIT 00000000
+
+Symbol: ATD_INIT
+   Definitions
+      At line 28 in file main.s
+   Uses
+      At line 70 in file main.s
+Comment: ATD_INIT used once
+ST_INIT 00000000
+
+Symbol: ST_INIT
+   Definitions
+      At line 29 in file main.s
+   Uses
+      At line 81 in file main.s
+Comment: ST_INIT used once
+Timer2A_H 00000000
+
+Symbol: Timer2A_H
+   Definitions
+      At line 27 in file main.s
+   Uses
+      None
+Comment: Timer2A_H unused
+initADC_F 00000000
+
+Symbol: initADC_F
+   Definitions
+      At line 26 in file main.s
+   Uses
+      At line 98 in file main.s
+Comment: initADC_F used once
+initI2C 00000000
+
+Symbol: initI2C
+   Definitions
+      At line 24 in file main.s
+   Uses
+      At line 96 in file main.s
+Comment: initI2C used once
+initTimer 00000000
+
+Symbol: initTimer
+   Definitions
+      At line 25 in file main.s
+   Uses
+      At line 97 in file main.s
+Comment: initTimer used once
+6 symbols
+361 symbols in table
